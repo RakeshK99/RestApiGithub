@@ -1,13 +1,15 @@
 """
 Student service – business logic for student CRUD.
 """
+
 import uuid
 from typing import Optional
 
 from app.models.student import Student
 from app.repositories.json_repository import JsonRepository
 
-
+class DuplicateEmailError(ValueError):
+    pass
 class StudentService:
     def __init__(self, repo: JsonRepository[Student]) -> None:
         self._repo = repo
@@ -38,6 +40,12 @@ class StudentService:
         existing = self._repo.get_by_id(student_id)
         if existing is None:
             return None
+        if "email" in data:
+            student_with_email = self._repo.get_by_field("email", data["email"])
+            if student_with_email != None and  student_with_email.id != student_id:
+                raise DuplicateEmailError("A student with this email already exists")
+        if "is_active" in data and not isinstance(data["is_active"], bool):
+            raise ValueError("is_active must be a boolean")
 
         updated = Student(
             id=student_id,

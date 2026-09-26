@@ -8,6 +8,7 @@ from flask_jwt_extended import jwt_required
 from app.models.student import Student
 from app.repositories.json_repository import JsonRepository
 from app.services.student_service import StudentService
+from app.services.student_service import DuplicateEmailError
 
 students_bp = Blueprint("students", __name__)
 
@@ -58,7 +59,12 @@ def create_student():
 def update_student(student_id: str):
     """Update an existing student."""
     body = request.get_json(silent=True) or {}
-    result = _get_service().update_student(student_id, body)
+    try: 
+        result = _get_service().update_student(student_id, body)
+    except DuplicateEmailError as exc:
+        return jsonify({"error": str(exc)}), 409
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
     if result is None:
         return jsonify({"error": "Student not found"}), 404
     return jsonify({"message": "Student updated", "student": result}), 200
